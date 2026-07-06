@@ -232,8 +232,9 @@ export default function DesignerPage() {
 
   return (
     // Replaced min-screen wrapper to allow fluid inline fitting within Shopify 
-    <div ref={containerRef} className="bg-transparent overflow-hidden">
-      
+    // <div ref={containerRef} className="bg-transparent overflow-hidden">
+    <div ref={containerRef} className="bg-white overflow-hidden min-h-full">
+          
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <h1 className="text-xl font-bold text-gray-900">AI Sign Designer</h1>
