@@ -615,7 +615,7 @@ export default function DesignerPage() {
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(3);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
-  // States to hold dynamically scraped Shopify attribute options
+  // Dynamic state attributes
   const [dynWidth, setDynWidth] = useState("600");
   const [dynHeight, setDynHeight] = useState("900");
   const [dynThickness, setDynThickness] = useState("5mm");
@@ -645,7 +645,7 @@ export default function DesignerPage() {
     syncHeightWithShopify();
     window.addEventListener("resize", syncHeightWithShopify);
 
-    // Listen to parent message signals for state variations
+    // Dynamic state listener for Shopify scrapings
     const handleMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === 'SHOPIFY_ATTRIBUTES_CHANGED') {
         const { width, height, thickness, eyelets } = event.data;
@@ -680,8 +680,8 @@ export default function DesignerPage() {
     setImageUrl("");
     setError("");
 
-    // Inject active scraped attribute data (like Thickness/Eyelets) directly into the generation prompt instructions
-    const attributeTunedPrompt = `${prompt} (Specifications: Sign thickness ${dynThickness}, Eyelets config: ${dynEyelets})`;
+    // Package actual selections safely into prompt specifications for AI processing
+    const attributeTunedPrompt = `${prompt} (Sign physical properties: ${dynWidth}mm width, ${dynHeight}mm height, sign thickness ${dynThickness}, and eyelets option: ${dynEyelets})`;
 
     try {
       const response = await fetch("/api/generate-design", {
@@ -703,7 +703,7 @@ export default function DesignerPage() {
       }
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to process target structural sign composition requests.");
+        throw new Error(data.error || "Failed to generate design.");
       }
 
       const newImageUrl = data.designUrl;
