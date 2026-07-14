@@ -1,0 +1,97 @@
+{% comment %} <div class="ai-designer-iframe-wrapper" style="width: 100%; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1.5rem;">
+  
+  <!-- Next.js App with an initial baseline height that shifts dynamically -->
+  <iframe 
+    id="ai-sign-designer-iframe"
+    src="https://ss-signs-automation-product-extensi.vercel.app/designer?shop={{ shop.permanent_domain }}&product={{ product.id }}&variant={{ product.selected_or_first_available_variant.id }}"
+    style="width: 100%; border: none; height: 500px; overflow: hidden; transition: height 0.15s ease-out;"
+    scrolling="no"
+    allow="clipboard-write">
+  </iframe>
+
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const iframe = document.getElementById('ai-sign-designer-iframe');
+    const targetOrigin = 'https://ss-signs-automation-product-extensi.vercel.app';
+
+    // Sync Shopify Variant Switches to Next.js
+    document.addEventListener('variant:change', (event) => {
+      const variant = event.detail.variant;
+      if (variant && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+          type: 'SHOPIFY_VARIANT_CHANGED',
+          variantId: variant.id,
+          sku: variant.sku
+        }, targetOrigin);
+      }
+    });
+
+    // Handle height resizing and other actions sent from Next.js
+    window.addEventListener('message', (event) => {
+      if (event.origin !== targetOrigin) return;
+
+      // Crucial: Dynamically update iframe height based on contents
+      if (event.data && event.data.type === 'SET_HEIGHT') {
+        const newHeight = parseInt(event.data.height, 10);
+        if (!isNaN(newHeight) && newHeight > 0) {
+          iframe.style.height = newHeight + 'px';
+        }
+      }
+    });
+  });
+</script> {% endcomment %}
+
+
+
+
+
+<div class="ai-designer-iframe-wrapper" style="width: 100%; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1.5rem;">
+  
+  <!-- Next.js App with an initial baseline height that shifts dynamically -->
+  <iframe 
+    id="ai-sign-designer-iframe"
+    src="https://ss-signs-automation-product-extensi.vercel.app/designer?shop={{ shop.permanent_domain }}&product={{ product.id }}&variant={{ product.selected_or_first_available_variant.id }}"
+    style="width: 100%; border: none; height: 500px; overflow: hidden; transition: height 0.15s ease-out;"
+    scrolling="no"
+    allow="clipboard-write">
+  </iframe>
+
+</div>
+
+<script>
+  (() => {
+    const targetOrigin = 'https://ss-signs-automation-product-extensi.vercel.app';
+
+    // 1. Sync Shopify Variant Switches to Next.js
+    document.addEventListener('variant:change', (event) => {
+      const iframe = document.getElementById('ai-sign-designer-iframe');
+      const variant = event.detail.variant;
+      if (variant && iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+          type: 'SHOPIFY_VARIANT_CHANGED',
+          variantId: variant.id,
+          sku: variant.sku
+        }, targetOrigin);
+      }
+    });
+
+    // 2. Handle height resizing and actions sent from Next.js (Moved outside DOMContentLoaded)
+    window.addEventListener('message', (event) => {
+      if (event.origin !== targetOrigin) return;
+
+      // Crucial: Dynamically update iframe height based on contents
+      if (event.data && event.data.type === 'SET_HEIGHT') {
+        const iframe = document.getElementById('ai-sign-designer-iframe');
+        if (iframe) {
+          const newHeight = parseInt(event.data.height, 10);
+          if (!isNaN(newHeight) && newHeight > 0) {
+            // Added a +15px safety buffer to ensure no scrollbars or subtle edge cutoffs happen
+            iframe.style.height = (newHeight + 15) + 'px';
+          }
+        }
+      }
+    });
+  })();
+</script>
