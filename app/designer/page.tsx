@@ -992,12 +992,35 @@ export default function DesignerPage() {
   };
 
   // Push design image back to main Shopify gallery element
+  // const syncProductImageWithShopify = (imgUrl: string) => {
+  //   if (imgUrl) {
+  //     window.parent.postMessage({ 
+  //       type: "UPDATE_PRODUCT_IMAGE", 
+  //       imageUrl: imgUrl 
+  //     }, "*");
+  //   }
+  // };
+
+  // Push design image back to main Shopify gallery element
   const syncProductImageWithShopify = (imgUrl: string) => {
-    if (imgUrl) {
-      window.parent.postMessage({ 
-        type: "UPDATE_PRODUCT_IMAGE", 
-        imageUrl: imgUrl 
-      }, "*");
+    if (!imgUrl) return;
+
+    console.log("✈️ [Next.js] Attempting to dispatch image to Shopify:", imgUrl);
+
+    const payload = { 
+      type: "UPDATE_PRODUCT_IMAGE", 
+      imageUrl: imgUrl 
+    };
+
+    // Fallback chain: try parent window, then absolute top window
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(payload, "*");
+      console.log("📬 Sent via window.parent");
+    } else if (window.top) {
+      window.top.postMessage(payload, "*");
+      console.log("📬 Sent via window.top (Sandbox Fallback)");
+    } else {
+      console.error("❌ Crucial Error: No window access available due to strict sandbox restrictions.");
     }
   };
 
