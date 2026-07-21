@@ -1507,9 +1507,18 @@ export default function DesignerPage() {
         {/* Header Panel */}
         <div className="bg-white border-b border-gray-200 pb-3 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <h1 className="text-base font-bold text-gray-900 tracking-tight">AI Sign Designer</h1>
+            {/* <h1 className="text-base font-bold text-gray-900 tracking-tight">AI Sign Designer</h1> */}
+            <p className="text-[12px] text-gray-800 font-bold">
+              Current Specs:
+            </p>
             <p className="text-[11px] text-gray-500">
-              Current Specs: {dynWidth}mm x {dynHeight}mm | Thickness: {dynThickness} | Eyelets: {dynEyelets}
+              {dynWidth}mm x {dynHeight}mm
+            </p>
+            <p className="text-[11px] text-gray-500">
+              Thickness: {dynThickness}
+            </p>
+            <p className="text-[11px] text-gray-500">
+              Eyelets: {dynEyelets}
             </p>
           </div>
           
