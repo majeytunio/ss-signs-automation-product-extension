@@ -3514,8 +3514,8 @@ export default function DesignerPage() {
   ];
 
   return (
-    <div ref={containerRef} className="w-full h-fit bg-white p-2">
-      <div className="w-full max-w-xl mx-auto p-4 font-sans space-y-3 bg-white text-gray-900 rounded-xl border border-gray-200 shadow-sm select-none">
+    <div ref={containerRef} className="w-full h-fit bg-white p-0 m-0">
+      <div className="w-full max-w-xl mx-auto p-0 font-sans space-y-3 bg-white text-gray-900 select-none">
         <div
           className="w-full max-w-xl mx-auto p-4 font-sans space-y-3 bg-white text-gray-900 rounded-xl border border-gray-200 shadow-sm select-none"
           onMouseMove={handleMouseMove}
