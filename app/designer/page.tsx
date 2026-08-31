@@ -3467,7 +3467,7 @@ export default function DesignerPage() {
     canvas: HTMLCanvasElement,
     ctx: CanvasRenderingContext2D
   ) => {
-    // 3. Draw All Dynamic Text Overlays with Multiline Rendering
+    // Draw All Dynamic Text Overlays with Multiline Rendering
     textElements.forEach((el) => {
       if (!el.text.trim()) return;
 
@@ -3490,14 +3490,35 @@ export default function DesignerPage() {
       });
     });
 
+    // Convert canvas output to JPEG Data URI
     const finalDataUri = canvas.toDataURL("image/jpeg", 0.95);
-    if (window.parent) {
+
+    if (typeof window !== "undefined" && window.parent) {
+      // 1. Direct message to update all Shopify Product Thumbnails & Gallery
+      window.parent.postMessage(
+        {
+          type: "UPDATE_PRODUCT_IMAGE",
+          imageUrl: finalDataUri,
+        },
+        "*"
+      );
+
+      // 2. Transmit complete payload for Shopify Cart / Form attributes
       window.parent.postMessage(
         {
           type: "SET_DESIGN_RESULT",
           imageUrl: finalDataUri,
           textElements,
           productSpecs,
+        },
+        "*"
+      );
+
+      // 3. Trigger Fullscreen Lightbox Preview on Shopify Storefront
+      window.parent.postMessage(
+        {
+          type: "OPEN_FULLSCREEN_LIGHTBOX",
+          imageUrl: finalDataUri,
         },
         "*"
       );
