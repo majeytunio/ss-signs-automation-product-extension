@@ -3216,7 +3216,7 @@ export default function DesignerPage() {
   const [textElements, setTextElements] = useState<TextElement[]>([
     {
       id: "text-1",
-      text: "FAMILY DAY\nToday",
+      text: "YOUR TEXT\nOne",
       x: 50,
       y: 50,
       fontSize: 24,
