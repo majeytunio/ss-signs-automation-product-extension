@@ -3253,6 +3253,42 @@ export default function DesignerPage() {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
+
+  // Place inside DesignerPage function component in app/designer/page.tsx
+  useEffect(() => {
+    const sendHeight = () => {
+      if (typeof window !== "undefined" && window.parent) {
+        const height = document.body.scrollHeight || document.documentElement.scrollHeight;
+        window.parent.postMessage({ type: "SET_HEIGHT", height }, "*");
+        window.parent.postMessage({ type: "RESIZE_APP_IFRAME", height }, "*");
+      }
+    };
+
+    sendHeight();
+
+    const handleParentMessage = (e: MessageEvent) => {
+      if (e.data?.type === "REQUEST_HEIGHT_SYNC") {
+        sendHeight();
+      }
+    };
+
+    window.addEventListener("message", handleParentMessage);
+
+    const observer = new ResizeObserver(() => {
+      sendHeight();
+    });
+
+    observer.observe(document.body);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("message", handleParentMessage);
+    };
+  }, [imageUrl, textElements, loading]);
+
+
+
+
   // Handle Text Layer Management
   const handleAddTextElement = () => {
     const newId = `text-${Date.now()}`;
