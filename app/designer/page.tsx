@@ -3254,13 +3254,19 @@ export default function DesignerPage() {
   }, []);
 
 
-  // Place inside DesignerPage function component in app/designer/page.tsx
+  // Inside DesignerPage component in app/designer/page.tsx
+  const containerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const sendHeight = () => {
-      if (typeof window !== "undefined" && window.parent) {
-        const height = document.body.scrollHeight || document.documentElement.scrollHeight;
-        window.parent.postMessage({ type: "SET_HEIGHT", height }, "*");
-        window.parent.postMessage({ type: "RESIZE_APP_IFRAME", height }, "*");
+      if (containerRef.current && typeof window !== "undefined" && window.parent) {
+        // Measure explicit pixel height of the inner card container
+        const cardHeight = Math.ceil(containerRef.current.getBoundingClientRect().height);
+        
+        if (cardHeight > 0) {
+          window.parent.postMessage({ type: "SET_HEIGHT", height: cardHeight + 10 }, "*");
+          window.parent.postMessage({ type: "RESIZE_APP_IFRAME", height: cardHeight + 10 }, "*");
+        }
       }
     };
 
@@ -3274,14 +3280,17 @@ export default function DesignerPage() {
 
     window.addEventListener("message", handleParentMessage);
 
-    const observer = new ResizeObserver(() => {
-      sendHeight();
-    });
-
-    observer.observe(document.body);
+    // ResizeObserver attached directly to card DOM node, NOT body
+    let observer: ResizeObserver | null = null;
+    if (containerRef.current) {
+      observer = new ResizeObserver(() => {
+        sendHeight();
+      });
+      observer.observe(containerRef.current);
+    }
 
     return () => {
-      observer.disconnect();
+      if (observer) observer.disconnect();
       window.removeEventListener("message", handleParentMessage);
     };
   }, [imageUrl, textElements, loading]);
@@ -3505,295 +3514,299 @@ export default function DesignerPage() {
   ];
 
   return (
-    <div
-      className="w-full max-w-xl mx-auto p-4 font-sans space-y-3 bg-white text-gray-900 rounded-xl border border-gray-200 shadow-sm select-none"
-      onMouseMove={handleMouseMove}
-      onMouseUp={stopDragging}
-      onMouseLeave={stopDragging}
-    >
-      {/* Header Specs Bar */}
-      <div className="border-b border-gray-200 pb-2.5 flex items-center justify-between">
-        <div>
-          <h1 className="text-xs font-bold text-gray-900 tracking-tight">AI Sign Designer</h1>
-          <p className="text-[10px] text-gray-500">
-            Specs: {productSpecs.width} x {productSpecs.height} | Thickness: {productSpecs.thickness} | Eyelets: {productSpecs.eyelets}
-          </p>
-        </div>
-        <span className="text-[10px] font-semibold text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">
-          {remainingAttempts} attempts left
-        </span>
-      </div>
-
-      {/* Error / Notice Display */}
-      {errorNotice && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-2.5 rounded-md flex items-center justify-between">
-          <span><strong>Notice:</strong> {errorNotice}</span>
-          <button onClick={() => setErrorNotice(null)} className="text-red-500 hover:text-red-700 font-bold ml-2">✕</button>
-        </div>
-      )}
-
-      {/* Step 1: Prompt Input */}
-      <div className="space-y-1">
-        <label className="text-[11px] font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-          <span className="bg-sky-600 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">1</span>
-          Describe Background Theme
-        </label>
-        <textarea
-          rows={2}
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="e.g. Modern geometric vector background with blue and yellow accents..."
-          className="w-full text-xs p-2.5 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none resize-none select-text"
-        />
-      </div>
-
-      {/* Step 2: Select Style Preset */}
-      <div className="space-y-1.5">
-        <label className="text-[11px] font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-          <span className="bg-sky-600 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">2</span>
-          Select Theme Style
-        </label>
-        <div className="flex flex-wrap gap-1.5">
-          {stylePresets.map((style) => (
-            <button
-              key={style}
-              type="button"
-              onClick={() => setSelectedStyle(style)}
-              className={`text-[10px] px-2.5 py-1 rounded-full font-medium transition-all ${
-                selectedStyle === style
-                  ? "bg-sky-600 text-white font-bold"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              {style}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Generate Action Button */}
-      <button
-        type="button"
-        onClick={handleGenerate}
-        disabled={loading || !prompt || remainingAttempts === 0}
-        className="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs uppercase tracking-wider rounded-md shadow-sm disabled:opacity-50 transition-all"
-      >
-        {loading ? "Generating Clean Background..." : "Generate Background Asset"}
-      </button>
-
-      {/* Step 3: Interactive Draggable Canvas */}
-      {imageUrl && !loading && (
-        <div className="bg-white rounded-md border border-gray-200 p-3 space-y-3 shadow-xs mt-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <span className="bg-sky-600 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">3</span>
-              <h2 className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Interactive Overlay Canvas</h2>
+    <div ref={containerRef} className="w-full h-fit bg-white p-2">
+      <div className="w-full max-w-xl mx-auto p-4 font-sans space-y-3 bg-white text-gray-900 rounded-xl border border-gray-200 shadow-sm select-none">
+        <div
+          className="w-full max-w-xl mx-auto p-4 font-sans space-y-3 bg-white text-gray-900 rounded-xl border border-gray-200 shadow-sm select-none"
+          onMouseMove={handleMouseMove}
+          onMouseUp={stopDragging}
+          onMouseLeave={stopDragging}
+        >
+          {/* Header Specs Bar */}
+          <div className="border-b border-gray-200 pb-2.5 flex items-center justify-between">
+            <div>
+              <h1 className="text-xs font-bold text-gray-900 tracking-tight">AI Sign Designer</h1>
+              <p className="text-[10px] text-gray-500">
+                Specs: {productSpecs.width} x {productSpecs.height} | Thickness: {productSpecs.thickness} | Eyelets: {productSpecs.eyelets}
+              </p>
             </div>
-            <label className="flex items-center gap-1 text-[10px] font-medium text-gray-600 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showPrintGuides}
-                onChange={(e) => setShowPrintGuides(e.target.checked)}
-                className="rounded border-gray-300 text-sky-600 focus:ring-sky-500"
-              />
-              Bleed Guides
+            <span className="text-[10px] font-semibold text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">
+              {remainingAttempts} attempts left
+            </span>
+          </div>
+
+          {/* Error / Notice Display */}
+          {errorNotice && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-2.5 rounded-md flex items-center justify-between">
+              <span><strong>Notice:</strong> {errorNotice}</span>
+              <button onClick={() => setErrorNotice(null)} className="text-red-500 hover:text-red-700 font-bold ml-2">✕</button>
+            </div>
+          )}
+
+          {/* Step 1: Prompt Input */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="bg-sky-600 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">1</span>
+              Describe Background Theme
             </label>
+            <textarea
+              rows={2}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="e.g. Modern geometric vector background with blue and yellow accents..."
+              className="w-full text-xs p-2.5 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none resize-none select-text"
+            />
           </div>
 
-          {/* Draggable Viewport Box */}
-          <div className="bg-gray-50 rounded-md p-2 flex items-center justify-center border border-gray-200">
-            <div
-              ref={canvasRef}
-              className="relative border border-dashed border-gray-300 bg-white rounded overflow-hidden"
-              style={{
-                width: "100%",
-                maxWidth: aspectRatio > 1 ? "320px" : `${320 * aspectRatio}px`,
-                aspectRatio: `${aspectRatio}`,
-              }}
-            >
-              {/* Clean AI Background Image */}
-              <img
-                src={imageUrl}
-                alt="AI Background"
-                className="w-full h-full object-contain pointer-events-none"
-              />
-
-              {/* Print Safe Margin Overlay */}
-              {showPrintGuides && (
-                <div className="absolute inset-1.5 border border-dashed border-red-500/70 pointer-events-none flex items-start justify-start p-0.5">
-                  <span className="text-[7px] font-bold text-red-600 bg-white/90 px-0.5 rounded">5mm Margin</span>
-                </div>
-              )}
-
-              {/* Draggable Logo */}
-              {logoUrl && (
-                <div
-                  onMouseDown={() => (isDraggingLogo.current = true)}
-                  className="absolute cursor-grab active:cursor-grabbing border border-dashed border-sky-400 p-0.5 rounded bg-white/20 hover:border-sky-600"
-                  style={{
-                    left: `${logoPos.x}%`,
-                    top: `${logoPos.y}%`,
-                    transform: "translate(-50%, -50%)",
-                  }}
-                >
-                  <img src={logoUrl} alt="Logo" className="h-8 w-auto object-contain pointer-events-none" />
-                </div>
-              )}
-
-              {/* Multi-Text Render Engine (Supports Enter key lines) */}
-              {textElements.map((el) => {
-                const isSelected = el.id === selectedTextId;
-                return (
-                  <div
-                    key={el.id}
-                    onMouseDown={(e) => {
-                      e.stopPropagation();
-                      setSelectedTextId(el.id);
-                      draggingId.current = el.id;
-                    }}
-                    className={`absolute cursor-grab active:cursor-grabbing px-2 py-0.5 rounded text-center whitespace-pre-wrap leading-tight transition-all ${
-                      isSelected
-                        ? "border border-sky-500 ring-2 ring-sky-400/40 bg-sky-50/20"
-                        : "border border-dashed border-transparent hover:border-sky-300"
-                    }`}
-                    style={{
-                      left: `${el.x}%`,
-                      top: `${el.y}%`,
-                      transform: "translate(-50%, -50%)",
-                      color: el.textColor,
-                      fontSize: `${el.fontSize}px`,
-                      fontFamily: el.fontFamily,
-                    }}
-                  >
-                    <span className="font-bold drop-shadow-xs select-none">{el.text || "Empty Text"}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Multi-Text & Property Customizer */}
-          <div className="bg-gray-50 p-2.5 rounded border border-gray-200 space-y-2">
-            <div className="flex items-center justify-between border-b border-gray-200 pb-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-700">Manage Text Layers</span>
-              <button
-                type="button"
-                onClick={handleAddTextElement}
-                className="text-[10px] bg-sky-600 text-white font-bold px-2 py-0.5 rounded hover:bg-sky-700 transition-all"
-              >
-                + Add Text Layer
-              </button>
-            </div>
-
-            {/* Selection Tabs */}
-            <div className="flex flex-wrap gap-1">
-              {textElements.map((el, idx) => (
+          {/* Step 2: Select Style Preset */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="bg-sky-600 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">2</span>
+              Select Theme Style
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {stylePresets.map((style) => (
                 <button
-                  key={el.id}
+                  key={style}
                   type="button"
-                  onClick={() => setSelectedTextId(el.id)}
-                  className={`text-[10px] px-2 py-0.5 rounded font-medium border transition-all ${
-                    el.id === selectedTextId
-                      ? "bg-sky-600 text-white border-sky-600 font-bold"
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                  onClick={() => setSelectedStyle(style)}
+                  className={`text-[10px] px-2.5 py-1 rounded-full font-medium transition-all ${
+                    selectedStyle === style
+                      ? "bg-sky-600 text-white font-bold"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
-                  Text #{idx + 1}
+                  {style}
                 </button>
               ))}
             </div>
+          </div>
 
-            {/* Controls for Active Text Item */}
-            {activeText && (
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold text-gray-600">Edit Sign Text (Press Enter for New Line)</label>
-                  {textElements.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTextElement(activeText.id)}
-                      className="text-[10px] text-red-600 hover:underline font-semibold"
-                    >
-                      Delete Layer
-                    </button>
-                  )}
+          {/* Generate Action Button */}
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={loading || !prompt || remainingAttempts === 0}
+            className="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs uppercase tracking-wider rounded-md shadow-sm disabled:opacity-50 transition-all"
+          >
+            {loading ? "Generating Clean Background..." : "Generate Background Asset"}
+          </button>
+
+          {/* Step 3: Interactive Draggable Canvas */}
+          {imageUrl && !loading && (
+            <div className="bg-white rounded-md border border-gray-200 p-3 space-y-3 shadow-xs mt-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="bg-sky-600 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">3</span>
+                  <h2 className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Interactive Overlay Canvas</h2>
                 </div>
-
-                <textarea
-                  rows={2}
-                  value={activeText.text}
-                  onChange={(e) => updateActiveTextProp("text", e.target.value)}
-                  placeholder="Enter text..."
-                  className="w-full border border-gray-300 rounded p-1.5 text-xs text-gray-900 bg-white focus:ring-2 focus:ring-sky-500 outline-none resize-none select-text"
-                />
-
-                <div className="flex gap-1.5 items-center">
-                  <select
-                    value={activeText.fontFamily}
-                    onChange={(e) => updateActiveTextProp("fontFamily", e.target.value)}
-                    className="flex-1 border border-gray-300 rounded px-1.5 py-1 text-[11px] text-gray-800 bg-white"
-                  >
-                    <option value="Montserrat">Montserrat</option>
-                    <option value="Arial">Arial</option>
-                    <option value="Impact">Impact</option>
-                    <option value="Times New Roman">Times New Roman</option>
-                  </select>
+                <label className="flex items-center gap-1 text-[10px] font-medium text-gray-600 cursor-pointer">
                   <input
-                    type="color"
-                    value={activeText.textColor}
-                    onChange={(e) => updateActiveTextProp("textColor", e.target.value)}
-                    className="w-7 h-6 rounded border border-gray-300 cursor-pointer p-0.5 bg-white"
-                    title="Text Color"
+                    type="checkbox"
+                    checked={showPrintGuides}
+                    onChange={(e) => setShowPrintGuides(e.target.checked)}
+                    className="rounded border-gray-300 text-sky-600 focus:ring-sky-500"
                   />
-                  <input
-                    type="number"
-                    value={activeText.fontSize}
-                    onChange={(e) => updateActiveTextProp("fontSize", Number(e.target.value))}
-                    className="w-12 border border-gray-300 rounded px-1 text-[11px] text-center bg-white"
-                    min={10}
-                    max={72}
+                  Bleed Guides
+                </label>
+              </div>
+
+              {/* Draggable Viewport Box */}
+              <div className="bg-gray-50 rounded-md p-2 flex items-center justify-center border border-gray-200">
+                <div
+                  ref={canvasRef}
+                  className="relative border border-dashed border-gray-300 bg-white rounded overflow-hidden"
+                  style={{
+                    width: "100%",
+                    maxWidth: aspectRatio > 1 ? "320px" : `${320 * aspectRatio}px`,
+                    aspectRatio: `${aspectRatio}`,
+                  }}
+                >
+                  {/* Clean AI Background Image */}
+                  <img
+                    src={imageUrl}
+                    alt="AI Background"
+                    className="w-full h-full object-contain pointer-events-none"
                   />
+
+                  {/* Print Safe Margin Overlay */}
+                  {showPrintGuides && (
+                    <div className="absolute inset-1.5 border border-dashed border-red-500/70 pointer-events-none flex items-start justify-start p-0.5">
+                      <span className="text-[7px] font-bold text-red-600 bg-white/90 px-0.5 rounded">5mm Margin</span>
+                    </div>
+                  )}
+
+                  {/* Draggable Logo */}
+                  {logoUrl && (
+                    <div
+                      onMouseDown={() => (isDraggingLogo.current = true)}
+                      className="absolute cursor-grab active:cursor-grabbing border border-dashed border-sky-400 p-0.5 rounded bg-white/20 hover:border-sky-600"
+                      style={{
+                        left: `${logoPos.x}%`,
+                        top: `${logoPos.y}%`,
+                        transform: "translate(-50%, -50%)",
+                      }}
+                    >
+                      <img src={logoUrl} alt="Logo" className="h-8 w-auto object-contain pointer-events-none" />
+                    </div>
+                  )}
+
+                  {/* Multi-Text Render Engine (Supports Enter key lines) */}
+                  {textElements.map((el) => {
+                    const isSelected = el.id === selectedTextId;
+                    return (
+                      <div
+                        key={el.id}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          setSelectedTextId(el.id);
+                          draggingId.current = el.id;
+                        }}
+                        className={`absolute cursor-grab active:cursor-grabbing px-2 py-0.5 rounded text-center whitespace-pre-wrap leading-tight transition-all ${
+                          isSelected
+                            ? "border border-sky-500 ring-2 ring-sky-400/40 bg-sky-50/20"
+                            : "border border-dashed border-transparent hover:border-sky-300"
+                        }`}
+                        style={{
+                          left: `${el.x}%`,
+                          top: `${el.y}%`,
+                          transform: "translate(-50%, -50%)",
+                          color: el.textColor,
+                          fontSize: `${el.fontSize}px`,
+                          fontFamily: el.fontFamily,
+                        }}
+                      >
+                        <span className="font-bold drop-shadow-xs select-none">{el.text || "Empty Text"}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* Logo Upload Box */}
-          <div className="bg-gray-50 p-2 rounded space-y-1.5 border border-gray-200">
-            <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-700">Logo Upload</h3>
-            <input
-              type="file"
-              accept="image/png, image/jpeg, image/svg+xml"
-              onChange={handleLogoUpload}
-              className="w-full text-[10px] text-gray-600 file:mr-1.5 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-sky-100 file:text-sky-700 hover:file:bg-sky-200 cursor-pointer"
-            />
-            {logoWarning && (
-              <p className="text-[9px] text-amber-800 bg-amber-50 border border-amber-200 p-1 rounded">
-                ⚠️ {logoWarning}
-              </p>
-            )}
-          </div>
+              {/* Multi-Text & Property Customizer */}
+              <div className="bg-gray-50 p-2.5 rounded border border-gray-200 space-y-2">
+                <div className="flex items-center justify-between border-b border-gray-200 pb-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-700">Manage Text Layers</span>
+                  <button
+                    type="button"
+                    onClick={handleAddTextElement}
+                    className="text-[10px] bg-sky-600 text-white font-bold px-2 py-0.5 rounded hover:bg-sky-700 transition-all"
+                  >
+                    + Add Text Layer
+                  </button>
+                </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-1.5 pt-1">
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={remainingAttempts === 0}
-              className="flex-1 py-1.5 rounded border border-gray-300 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-all"
-            >
-              Regenerate Background
-            </button>
-            <button
-              type="button"
-              onClick={handleExportDesign}
-              className="flex-1 py-1.5 rounded bg-sky-600 hover:bg-sky-700 text-xs font-bold text-white shadow-xs transition-all uppercase tracking-wider"
-            >
-              Use This Design →
-            </button>
-          </div>
+                {/* Selection Tabs */}
+                <div className="flex flex-wrap gap-1">
+                  {textElements.map((el, idx) => (
+                    <button
+                      key={el.id}
+                      type="button"
+                      onClick={() => setSelectedTextId(el.id)}
+                      className={`text-[10px] px-2 py-0.5 rounded font-medium border transition-all ${
+                        el.id === selectedTextId
+                          ? "bg-sky-600 text-white border-sky-600 font-bold"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                      }`}
+                    >
+                      Text #{idx + 1}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Controls for Active Text Item */}
+                {activeText && (
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold text-gray-600">Edit Sign Text (Press Enter for New Line)</label>
+                      {textElements.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTextElement(activeText.id)}
+                          className="text-[10px] text-red-600 hover:underline font-semibold"
+                        >
+                          Delete Layer
+                        </button>
+                      )}
+                    </div>
+
+                    <textarea
+                      rows={2}
+                      value={activeText.text}
+                      onChange={(e) => updateActiveTextProp("text", e.target.value)}
+                      placeholder="Enter text..."
+                      className="w-full border border-gray-300 rounded p-1.5 text-xs text-gray-900 bg-white focus:ring-2 focus:ring-sky-500 outline-none resize-none select-text"
+                    />
+
+                    <div className="flex gap-1.5 items-center">
+                      <select
+                        value={activeText.fontFamily}
+                        onChange={(e) => updateActiveTextProp("fontFamily", e.target.value)}
+                        className="flex-1 border border-gray-300 rounded px-1.5 py-1 text-[11px] text-gray-800 bg-white"
+                      >
+                        <option value="Montserrat">Montserrat</option>
+                        <option value="Arial">Arial</option>
+                        <option value="Impact">Impact</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                      </select>
+                      <input
+                        type="color"
+                        value={activeText.textColor}
+                        onChange={(e) => updateActiveTextProp("textColor", e.target.value)}
+                        className="w-7 h-6 rounded border border-gray-300 cursor-pointer p-0.5 bg-white"
+                        title="Text Color"
+                      />
+                      <input
+                        type="number"
+                        value={activeText.fontSize}
+                        onChange={(e) => updateActiveTextProp("fontSize", Number(e.target.value))}
+                        className="w-12 border border-gray-300 rounded px-1 text-[11px] text-center bg-white"
+                        min={10}
+                        max={72}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Logo Upload Box */}
+              <div className="bg-gray-50 p-2 rounded space-y-1.5 border border-gray-200">
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-700">Logo Upload</h3>
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/svg+xml"
+                  onChange={handleLogoUpload}
+                  className="w-full text-[10px] text-gray-600 file:mr-1.5 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-sky-100 file:text-sky-700 hover:file:bg-sky-200 cursor-pointer"
+                />
+                {logoWarning && (
+                  <p className="text-[9px] text-amber-800 bg-amber-50 border border-amber-200 p-1 rounded">
+                    ⚠️ {logoWarning}
+                  </p>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={remainingAttempts === 0}
+                  className="flex-1 py-1.5 rounded border border-gray-300 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-all"
+                >
+                  Regenerate Background
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportDesign}
+                  className="flex-1 py-1.5 rounded bg-sky-600 hover:bg-sky-700 text-xs font-bold text-white shadow-xs transition-all uppercase tracking-wider"
+                >
+                  Use This Design →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
